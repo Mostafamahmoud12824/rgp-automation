@@ -1,4 +1,4 @@
-//!---- Restrunt  
+//! warehouses
 const { Builder, By, until } = require("selenium-webdriver");
 const firefox = require("selenium-webdriver/firefox");
 const XLSX = require("xlsx");
@@ -177,20 +177,20 @@ async function uploadImage(driver, imagePath, timeout = 10000) {
 
     await waitAndClick(driver, By.xpath("//p[contains(text(),'Products entry')]"));
 
-    await waitAndType(
-      driver,
-      By.xpath('//input[@placeholder="email or phone number"]'),
-      "cashier"
-    );
+    // await waitAndType(
+    //   driver,
+    //   By.xpath('//input[@placeholder="email or phone number"]'),
+    //   "cashier"
+    // );
 
-    await waitAndType(
-      driver,
-      By.xpath('//input[@placeholder="password"]'),
-      "@cashier"
-    );
+    // await waitAndType(
+    //   driver,
+    //   By.xpath('//input[@placeholder="password"]'),
+    //   "@cashier"
+    // );
 
-    await waitAndClick(driver, By.xpath('//button[contains(text(),"Login")]'));
-    console.log("✓ Login successful\n");
+    // await waitAndClick(driver, By.xpath('//button[contains(text(),"Login")]'));
+    // console.log("✓ Login successful\n");
 
     /* ---------- Products ---------- */
     await waitAndClick(driver, By.xpath('//span[text()="products"]'));
