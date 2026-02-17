@@ -48,6 +48,35 @@ async function waitAndClick(driver, locator, timeout = 10000) {
 }
 
 /* ===============================
+   Helper: Select by label text
+   Finds the <select> that sits
+   inside the same <fieldset> whose
+   <label> contains the given text,
+   then picks the option by value.
+================================ */
+async function selectByLabelText(driver, labelText, optionValue, timeout = 10000) {
+  // Walk up from the label span → label → fieldset → find the select inside
+  const select = await driver.wait(
+    until.elementLocated(
+      By.xpath(
+        `//span[normalize-space(text())="${labelText}"]` +
+        `/ancestor::fieldset[1]` +
+        `//select`
+      )
+    ),
+    timeout
+  );
+  await driver.wait(until.elementIsVisible(select), timeout);
+
+  // Click the matching option by its value attribute
+  const option = await select.findElement(
+    By.css(`option[value="${optionValue}"]`)
+  );
+  await option.click();
+  return select;
+}
+
+/* ===============================
    Main
 ================================ */
 (async function main() {
@@ -81,8 +110,16 @@ async function waitAndClick(driver, locator, timeout = 10000) {
 
     console.log(`✓ ${products.length} products loaded\n`);
 
+    /*
+      Expected Excel columns:
+        name_ar   – Arabic name
+        name_en   – English name
+        price     – Selling price
+        sub       – Sub-category index (1-based offset used with nth-child)
+    */
+
     /* ---------- Firefox Driver ---------- */
-    const driverPath = "H:\\RGB\\geckodriver.exe";
+    const driverPath = "E:\\rgp-automation-master\\geckodriver.exe";
 
     if (!fs.existsSync(driverPath)) {
       throw new Error(`GeckoDriver not found: ${driverPath}`);
@@ -147,7 +184,7 @@ async function waitAndClick(driver, locator, timeout = 10000) {
 
         await waitAndClick(driver, By.xpath('//span[text()="add a new product"]'));
 
-        // Sub Category
+        // ── Sub Category ──────────────────────────────────────────────
         const subCategorySelect = await driver.wait(
           until.elementLocated(By.css('select[id^="select-sub_category_id"]')),
           10000
@@ -156,38 +193,43 @@ async function waitAndClick(driver, locator, timeout = 10000) {
           .findElement(By.css(`option:nth-child(${p.sub + 1})`))
           .click();
 
-        // Arabic Name
+        // ── Product Type (دايمًا منتج) ────────────────────────────────
+        // الـ select id بيتغير كل session، فبنستخدم نص الـ label بدلًا منه
+        await selectByLabelText(driver, "Product type", "product");
+        console.log(`  ✓ Product type set to: منتج`);
+
+        // ── Arabic Name ───────────────────────────────────────────────
         await waitAndType(
           driver,
           By.css('input[id^="input-name-"]'),
           p.name_ar
         );
 
-        // English Name
+        // ── English Name ──────────────────────────────────────────────
         await waitAndType(
           driver,
           By.xpath('//span[text()="✽ Name in english"]/ancestor::label/following::input[1]'),
           p.name_en
         );
 
-        // Price
+        // ── Price ─────────────────────────────────────────────────────
         const sellingCostInput = await driver.findElement(
           By.xpath('//legend[text()="Selling cost"]/following::input[1]')
         );
         await sellingCostInput.clear();
         await sellingCostInput.sendKeys(String(p.price));
 
-        // Create Button
+        // ── Create Button ─────────────────────────────────────────────
         await waitAndClick(
           driver,
           By.xpath('//button[@type="button" and contains(text(),"create")]')
         );
 
         await driver.sleep(500);
-        console.log(`✓ Product added successfully`);
+        console.log(`  ✓ Product added successfully`);
 
       } catch (err) {
-        console.error(`✗ Failed to add product: ${err.message}`);
+        console.error(`  ✗ Failed to add product: ${err.message}`);
       }
     }
 
