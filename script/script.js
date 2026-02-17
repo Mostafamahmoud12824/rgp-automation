@@ -48,12 +48,36 @@ async function waitAndClick(driver, locator, timeout = 10000) {
 }
 
 /* ===============================
+   Helper: Select by label text
+   بيدور على الـ <select> جوا نفس
+   الـ <fieldset> بتاع الـ label،
+   وبيختار الـ option بالـ value.
+================================ */
+async function selectByLabelText(driver, labelText, optionValue, timeout = 10000) {
+  const select = await driver.wait(
+    until.elementLocated(
+      By.xpath(
+        `//span[normalize-space(text())="${labelText}"]` +
+        `/ancestor::fieldset[1]` +
+        `//select`
+      )
+    ),
+    timeout
+  );
+  await driver.wait(until.elementIsVisible(select), timeout);
+
+  const option = await select.findElement(
+    By.css(`option[value="${optionValue}"]`)
+  );
+  await option.click();
+  return select;
+}
+
+/* ===============================
    Helper: Upload Image
 ================================ */
 async function uploadImage(driver, imagePath, timeout = 10000) {
   try {
-    // ابحث عن input من نوع file
-    // جرب عدة selectors محتملة
     const possibleSelectors = [
       By.css('input[type="file"]'),
       By.xpath('//input[@type="file"]'),
@@ -77,17 +101,14 @@ async function uploadImage(driver, imagePath, timeout = 10000) {
       return false;
     }
 
-    // أرسل مسار الملف للـ input
     await fileInput.sendKeys(imagePath);
-    
-    // انتظر شوية بعد الرفع
     await driver.sleep(1000);
     
-    console.log(`✓ Image uploaded: ${path.basename(imagePath)}`);
+    console.log(`  ✓ Image uploaded: ${path.basename(imagePath)}`);
     return true;
     
   } catch (err) {
-    console.warn(`⚠️  Failed to upload image: ${err.message}`);
+    console.warn(`  ⚠️  Failed to upload image: ${err.message}`);
     return false;
   }
 }
@@ -138,7 +159,7 @@ async function uploadImage(driver, imagePath, timeout = 10000) {
     }
 
     /* ---------- Firefox Driver ---------- */
-    const driverPath = "F:\\RGB\\geckodriver.exe";
+    const driverPath = "E:\\rgp-automation-master\\geckodriver.exe";
 
     if (!fs.existsSync(driverPath)) {
       throw new Error(`GeckoDriver not found: ${driverPath}`);
@@ -203,7 +224,7 @@ async function uploadImage(driver, imagePath, timeout = 10000) {
 
         await waitAndClick(driver, By.xpath('//span[text()="add a new product"]'));
 
-        // Sub Category
+        // ── Sub Category ──────────────────────────────────────────────
         const subCategorySelect = await driver.wait(
           until.elementLocated(By.css('select[id^="select-sub_category_id"]')),
           10000
@@ -212,50 +233,54 @@ async function uploadImage(driver, imagePath, timeout = 10000) {
           .findElement(By.css(`option:nth-child(${p.sub + 1})`))
           .click();
 
-        // Arabic Name
+        // ── Product Type (دايمًا منتج) ────────────────────────────────
+        await selectByLabelText(driver, "Product type", "product");
+        console.log(`  ✓ Product type set to: منتج`);
+
+        // ── Arabic Name ───────────────────────────────────────────────
         await waitAndType(
           driver,
           By.css('input[id^="input-name-"]'),
           p.name_ar
         );
 
-        // English Name
+        // ── English Name ──────────────────────────────────────────────
         await waitAndType(
           driver,
           By.xpath('//span[text()="✽ Name in english"]/ancestor::label/following::input[1]'),
           p.name_en
         );
 
-        // Price
+        // ── Price ─────────────────────────────────────────────────────
         const sellingCostInput = await driver.findElement(
           By.xpath('//legend[text()="Selling cost"]/following::input[1]')
         );
         await sellingCostInput.clear();
         await sellingCostInput.sendKeys(String(p.price));
 
-        /* ---------- Upload Image ---------- */
+        // ── Upload Image ──────────────────────────────────────────────
         if (p.image_name && fs.existsSync(imagesFolder)) {
           const imagePath = path.join(imagesFolder, p.image_name);
           
           if (fs.existsSync(imagePath)) {
-            console.log(`📷 Uploading image: ${p.image_name}`);
+            console.log(`  📷 Uploading image: ${p.image_name}`);
             await uploadImage(driver, imagePath);
           } else {
-            console.warn(`⚠️  Image not found: ${p.image_name}`);
+            console.warn(`  ⚠️  Image not found: ${p.image_name}`);
           }
         }
 
-        // Create Button
+        // ── Create Button ─────────────────────────────────────────────
         await waitAndClick(
           driver,
           By.xpath('//button[@type="button" and contains(text(),"create")]')
         );
 
         await driver.sleep(500);
-        console.log(`✓ Product added successfully`);
+        console.log(`  ✓ Product added successfully`);
 
       } catch (err) {
-        console.error(`✗ Failed to add product: ${err.message}`);
+        console.error(`  ✗ Failed to add product: ${err.message}`);
       }
     }
 
